@@ -22,16 +22,16 @@ function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUttera
 // ── Data & tampilan ──
 const rank=s=>s.tm.map(t=>Object.assign({},t,s.sc[t.id])).sort((a,b)=>b.n-a.n).map((t,i)=>Object.assign(t,{r:i+1}));
 const ini=n=>esc(String(n).replace(/^Regu /,'').slice(0,2).toUpperCase());
-const top=(sub,nav)=>`<header class="top"><div><h1>HSN Arena <span class="tag gd">Sunan Ampel</span></h1><small>${sub}</small></div>${nav||''}<div class="sg" style="text-align:right"><b id="clk" style="font-size:20px">--:--:--</b><small>WIB · SYNC AKTIF</small></div></header>`;
+const hdr=(sub,nav)=>`<header class="top"><div><h1>HSN Arena <span class="tag gd">Sunan Ampel</span></h1><small>${sub}</small></div>${nav||''}<div class="sg" style="text-align:right"><b id="clk" style="font-size:20px">--:--:--</b><small>WIB · SYNC AKTIF</small></div></header>`;
 const ring='<div class="ring" id="rn"><svg width="150" height="150"><circle cx="75" cy="75" r="66" fill="none" stroke="#1E3A4B" stroke-width="8"/><circle id="rg" cx="75" cy="75" r="66" fill="none" stroke="#00F2FE" stroke-width="8" stroke-linecap="round" stroke-dasharray="415"/></svg><b class="tm">00</b></div>';
 const RES={benar:['ok','JAWABAN BENAR'],salah:['er','JAWABAN SALAH'],lempar:['gd','DILEMPAR — REBUTAN ULANG'],gugur:['gd','SOAL GUGUR']};
 
-function pick(){return top('Pilih mode perangkat')+`<div class="wrap grid" style="max-width:720px"><h2>Masuk sebagai</h2>
+function pick(){return hdr('Pilih mode perangkat')+`<div class="wrap grid" style="max-width:720px"><h2>Masuk sebagai</h2>
 <button class="card br" data-act="pm:ifp" style="min-height:90px;text-align:left"><h3>Layar IFP</h3><span class="mut" style="text-transform:none">Panggung utama + buzzer sentuh (tanpa login)</span></button>
 <button class="card" data-act="pm:pantau" style="min-height:90px;text-align:left"><h3>Pantau Skor</h3><span class="mut" style="text-transform:none">Live scoreboard read-only (tanpa login)</span></button>
 <button class="card" data-act="pm:mod" style="min-height:90px;text-align:left"><h3>Panel Moderator</h3><span class="mut" style="text-transform:none">Butuh PIN Moderator</span></button>
 <button class="card gold" data-act="pm:adm" style="min-height:90px;text-align:left"><h3>Dashboard Admin</h3><span class="mut" style="text-transform:none">Butuh PIN Admin</span></button></div>`}
-function loginV(){return top('Akses panitia')+`<div class="ov"><div class="card act"><h2>${A.want==='adm'?'PIN Admin':'PIN Moderator'}</h2><label for="pin">Masukkan PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" autofocus>
+function loginV(){return hdr('Akses panitia')+`<div class="ov"><div class="card act"><h2>${A.want==='adm'?'PIN Admin':'PIN Moderator'}</h2><label for="pin">Masukkan PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" autofocus>
 <div class="row" style="margin-top:12px"><button data-act="pm:">Batal</button><button class="ok" data-act="lg">Masuk</button></div></div></div>`}
 
 function lbV(s){return rank(s).map(t=>{const x=s.done&&t.st!=='Lolos';return `<div class="lb ${t.r===1?'r1':''} ${x?'xx':''}" data-n="${esc(t.n+' '+t.i).toLowerCase()}" data-r="${t.r}" data-x="${x?1:0}"><div class="rk">${t.r}</div><div class="av">${ini(t.n)}</div><div style="flex:1"><h3>${esc(t.n)}</h3><span class="mut">${esc(t.i)}</span></div><span class="tag ${x?'er':'ok'}">${s.done?(x?'GUGUR':'LOLOS'):'SAFE'}</span><div class="big" style="font-size:32px">${t.n}</div><small class="sg">PTS</small></div>`}).join('')}
@@ -39,14 +39,14 @@ function lbV(s){return rank(s).map(t=>{const x=s.done&&t.st!=='Lolos';return `<d
 function ifpV(s){const q=s.q,L=s.lock&&s.tm.find(t=>t.id===s.lock),rs=RES[s.res];
  const pods=s.tm.map(t=>{const c=s.lock===t.id?'win':(s.buz&&s.out.indexOf(t.id)<0)?'rdy':'out',sc=s.sc[t.id];
   return `<button class="pod ${c}" data-act="buzz" data-id="${t.id}" ${c==='rdy'?'':'disabled'}><div class="row sp"><span class="tag">POD</span><span class="tag ${c==='win'?'gd':''}">${c==='win'?'TERKUNCI':c==='rdy'?'TEKAN!':'LOCKED OUT'}</span></div><h3 style="margin:8px 0 2px">${esc(t.n)}</h3><div class="mut">${esc(t.i)}</div><div class="sc">${sc.n} <small class="sg mut">PTS</small></div></button>`}).join('');
- return top('Stage 1 · IFP · Low latency HUD','<span class="tag ok"><i class="dot"></i> TERHUBUNG</span>')+(A.audio?'':'<div class="ov"><div class="card act br"><h2>Mulai Arena</h2><p class="mut" style="margin:8px 0 16px">Ketuk sekali untuk mengaktifkan suara & narator.</p><button class="bz" style="width:100%" data-act="snd">Mulai Arena</button></div></div>')+
+ return hdr('Stage 1 · IFP · Low latency HUD','<span class="tag ok"><i class="dot"></i> TERHUBUNG</span>')+(A.audio?'':'<div class="ov"><div class="card act br"><h2>Mulai Arena</h2><p class="mut" style="margin:8px 0 16px">Ketuk sekali untuk mengaktifkan suara & narator.</p><button class="bz" style="width:100%" data-act="snd">Mulai Arena</button></div></div>')+
  (L?`<div class="lockb card gold"><b class="sg">BUZZER TERKUNCI: ${esc(L.n)}</b></div>`:'')+
  `<div class="wrap grid g2"><div class="card br act"><div class="row sp"><span class="tag gd">${s.done?'PERTANDINGAN SELESAI':'SOAL '+q.no+' / '+q.tot}</span><span class="tag">${esc(q.kat||s.nama)}</span><span class="tag gd">+${q.bobot} POIN</span></div>
  ${s.done?'<div class="q ph">KLASEMEN AKHIR</div>'+lbV(s):`<div class="q ${q.text?'':'ph'}">${q.text?'“'+esc(q.text)+'”':'MENUNGGU MODERATOR…'}</div><div class="row sp"><span class="tag ${s.buz?'ok':''}">${s.buz?'BUZZER TERBUKA':L?'BUZZER TERKUNCI':'BUZZER STANDBY'}</span>${rs?`<span class="tag ${rs[0]==='ok'?'ok':rs[0]==='er'?'er':'gd'}">${rs[1]}</span>`:''}</div>`}</div>
  <div class="grid"><div class="card">${ring}<p class="sg mut" style="text-align:center;margin-top:8px">SISA WAKTU (DETIK)</p></div>${s.done?'':'<div class="card">'+lbV(s)+'</div>'}</div></div>
  <div class="wrap"><h2 style="margin-bottom:10px">Status pod buzzer peserta arena</h2><div class="pods">${pods}</div></div>`}
 
-function pantauV(s){return top('Live scoreboard · read-only')+`<div class="wrap"><div class="card" style="margin-bottom:12px"><div class="row sp"><h2>${esc(s.nama)}</h2><span class="tag gd">${s.done?'SELESAI':'SOAL '+s.q.no+' / '+s.q.tot}</span><span class="tag ok"><i class="dot"></i> LIVE</span></div></div>
+function pantauV(s){return hdr('Live scoreboard · read-only')+`<div class="wrap"><div class="card" style="margin-bottom:12px"><div class="row sp"><h2>${esc(s.nama)}</h2><span class="tag gd">${s.done?'SELESAI':'SOAL '+s.q.no+' / '+s.q.tot}</span><span class="tag ok"><i class="dot"></i> LIVE</span></div></div>
  <div class="row" style="margin-bottom:12px"><input id="fq" placeholder="Cari regu atau pesantren…" aria-label="Cari"><select id="ff" aria-label="Filter"><option value="">Semua regu</option><option value="top">Peringkat teratas</option><option value="safe">Status aman</option><option value="out">Gugur</option></select></div>${lbV(s)}</div>`}
 function flt(){const q=($('#fq')||{}).value,f=($('#ff')||{}).value;document.querySelectorAll('.lb[data-n]').forEach(e=>{e.hidden=!!((q&&e.dataset.n.indexOf(q.toLowerCase())<0)||(f==='top'&&+e.dataset.r>2)||(f==='safe'&&e.dataset.x==='1')||(f==='out'&&e.dataset.x!=='1'))})}
 
@@ -75,7 +75,7 @@ function admV(){const D=A.adm;if(!D){loadAdm();return '<div class="wrap"><div cl
 function loadAdm(){if(A.ld)return;A.ld=1;call('admData').then(r=>{A.ld=0;if(r.success){A.adm=r.data;paint()}else toast(r.message,1)})}
 
 function staffV(s){const adm=A.role==='adm',n=[['arena','Arena'],['skor','Skor']].concat(adm?[['admin','Admin']]:[]).map(x=>`<button class="${A.tab===x[0]?'on':''}" data-act="tab:${x[0]}">${x[1]}</button>`).join('')+'<button data-act="out">Keluar</button>';
- return top('Panel '+(adm?'admin':'moderator'),`<nav class="nav">${n}</nav>`)+(A.tab==='skor'?'<div class="wrap">'+lbV(s)+'</div>':A.tab==='admin'&&adm?admV():arena(s))}
+ return hdr('Panel '+(adm?'admin':'moderator'),`<nav class="nav">${n}</nav>`)+(A.tab==='skor'?'<div class="wrap">'+lbV(s)+'</div>':A.tab==='admin'&&adm?admV():arena(s))}
 
 function paint(){const a=$('#app');
  if(!A.mode){a.innerHTML=pick();return}if(A.mode==='login'){a.innerHTML=loginV();setTimeout(()=>{const p=$('#pin');p&&p.focus()},50);return}
