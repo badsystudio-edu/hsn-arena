@@ -48,3 +48,20 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;bord
 .lockb{position:fixed;top:68px;left:50%;transform:translateX(-50%);z-index:6;max-width:90vw}
 @media(max-width:767px){.top h1{font-size:15px}.pods{grid-template-columns:1fr 1fr}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.pcs{display:flex;gap:10px;flex-wrap:wrap}
+.pc{flex:0 0 138px;position:relative;border:1px solid var(--ln);border-radius:8px;overflow:hidden;background:var(--s2)}
+.pc img,.pc .ph0{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;transition:filter .4s}
+.pc .ph0{display:grid;place-items:center;font:700 40px 'Space Grotesk';color:var(--cy);background:linear-gradient(135deg,#112B3B,#06141D)}
+.pc .nm{padding:8px;font:700 12px/1.2 'Space Grotesk';text-transform:uppercase}.pc .nm small{display:block;color:var(--t2);font-size:10px;letter-spacing:.1em;margin-top:2px}
+.pc .pt{position:absolute;top:6px;right:6px;font-size:13px}
+.pc.on{border-color:var(--gd);box-shadow:0 0 20px rgba(245,158,11,.5)}
+.pc.rdy{border-color:var(--cy);cursor:pointer;animation:gl 1s infinite alternate}
+.pc.out img,.pc.out .ph0{filter:blur(7px) grayscale(1);opacity:.5}.pc.out .nm{opacity:.5;text-decoration:line-through}
+.whl{position:relative;width:min(440px,80vw);aspect-ratio:1;margin:auto}.whl canvas{width:100%;height:100%;border-radius:50%;border:4px solid var(--gd);transition:transform 5s cubic-bezier(.12,.7,.1,1)}
+.whl i{position:absolute;top:-8px;left:50%;transform:translateX(-50%);border:14px solid transparent;border-top:28px solid var(--gd);z-index:2}
+.rc{position:fixed;inset:0;z-index:40;background:rgba(6,20,29,.97);overflow:auto;padding:24px}.rc .pcs{justify-content:center}.rc .pc{flex-basis:170px;animation:zo .7s both}
+@keyframes zo{from{transform:scale(2.8);opacity:0}to{transform:scale(1);opacity:1}}
+.qi{max-width:100%;max-height:40vh;border-radius:8px;display:block;margin:8px auto}
+.aj{border:1px solid var(--ok);background:rgba(34,197,94,.12);border-radius:8px;padding:14px;font:700 clamp(18px,2.4vw,32px) 'Space Grotesk'}
+img.av{object-fit:cover;display:block}.lb.xx img{filter:blur(4px) grayscale(1)}
