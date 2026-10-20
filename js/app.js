@@ -5,7 +5,7 @@ const Perf={r:[],add(a,t,s){this.r.push({a,t,s});if(this.r.length>100)this.r.shi
 function toast(m,e){const d=document.createElement('div');d.textContent=m;if(e)d.className='e';$('#toast').appendChild(d);setTimeout(()=>d.remove(),3200)}
 
 // ── Pemanggil server (fetch ke GAS): timeout, retry baca, reqId idempoten untuk tulis ──
-function call(a,d,to){const w=!/^(boot|poll|admData)$/.test(a),id=w?(self.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random()):'';
+function call(a,d,to){const w=!/^(boot|poll|admData|getAudio)$/.test(a),id=w?(self.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random()):'';
  const once=async()=>{const c=new AbortController(),tm=setTimeout(()=>c.abort(),to||(w?30000:15000)),t0=performance.now();
   try{const rs=await fetch(GAS_URL,{method:'POST',redirect:'follow',cache:'no-store',signal:c.signal,headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({a:a,d:d||{},tk:A.tk,id:id})});
    const r=JSON.parse(await rs.text());Perf.add(a,Math.round(performance.now()-t0),r.ms);return r}
@@ -31,17 +31,22 @@ const Bgm={k:'',h:null,n:0,duck:0,
  set(k){if(!A.audio||(k===this.k&&(this.h||AU.cb)))return;this.k=k;this.n=0;clearInterval(this.h);this.h=null;if(AU.bgm('bgm_'+k))return;if(Snd.c)this.h=setInterval(()=>this.tick(),M[k].ms)},
  stop(){clearInterval(this.h);this.h=null;this.k='';AU.bgm(null)},
  tick(){const s=A.v&&A.v.s;if(!Snd.c||!s||s.mute||s.bgm===false)return;const c=M[this.k],d=this.duck?.35:1,ch=c.ch[(this.n>>3)%c.ch.length],f=ch[this.n%3]*(this.n%8>=4?c.m:1);Snd.t(f,.4,c.w,c.v*d);if(this.n%8===0)ch.forEach(x=>Snd.t(x/2,1.6,'sine',c.v*.8*d));if(this.k==='tense'&&this.n%4===0)Snd.t(60,.25,'sine',.18*d);this.n++}};
-// Audio kustom dari Drive: preload, crossfade BGM antar fase, loop & volume per slot
-const AU={el:{},cb:null,
- url(id,alt){return alt?'https://drive.google.com/uc?export=download&id='+id:'https://drive.usercontent.google.com/download?id='+id+'&export=download'},
+// Audio kustom: diambil lewat Apps Script → blob (di-cache di browser), crossfade BGM, loop & volume per slot
+async function auBlob(c){const key='/hsn-audio/'+c.id;try{const ca=await caches.open('hsn-au'),h=await ca.match(key);if(h)return URL.createObjectURL(await h.blob())}catch(e){}
+ const r=await call('getAudio',{id:c.id},180000);if(!r.success)throw new Error(r.message||'gagal memuat');const bin=atob(r.data),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const b=new Blob([u],{type:r.mime||'audio/mpeg'});
+ try{const ca=await caches.open('hsn-au');await ca.put(key,new Response(b))}catch(e){}return URL.createObjectURL(b)}
+const AU={el:{},cb:null,q:Promise.resolve(),
  load(cfg){Object.keys(this.el).forEach(k=>{if(!cfg[k]||cfg[k].id!==this.el[k]._c.id){this.el[k].pause();if(this.cb===this.el[k])this.cb=null;delete this.el[k]}});
-  Object.keys(cfg).forEach(k=>{let e=this.el[k];if(!e){e=new Audio();e.preload='auto';e._g=k.indexOf('bgm_')===0?0:1;e._gt=e._g;e._fd=900;e.onerror=()=>{if(!e._alt){e._alt=1;e.src=AU.url(e._c.id,1);e.load()}};e._c=cfg[k];e.src=AU.url(cfg[k].id);e.load();this.el[k]=e}e._c=cfg[k];e.loop=!!cfg[k].loop})},
- sfx(k){const e=this.el[k];if(!e)return false;e.currentTime=0;e._g=1;e._gt=1;e.play().catch(()=>{});return true},
+  Object.keys(cfg).forEach(k=>{let e=this.el[k];if(!e){e=new Audio();e.preload='auto';e._g=k.indexOf('bgm_')===0?0:1;e._gt=e._g;e._fd=900;e._c=cfg[k];this.el[k]=e;
+   this.q=this.q.then(async()=>{try{const u=await auBlob(e._c);if(this.el[k]!==e)return;e.src=u;e.load();if(this.cb===e){e.currentTime=0;e.play().catch(()=>{})}}catch(x){toast('Audio "'+e._c.name+'" gagal dimuat',1)}})}
+   e._c=cfg[k];e.loop=!!cfg[k].loop})},
+ sfx(k){const e=this.el[k];if(!e||!e.src)return false;e.currentTime=0;e._g=1;e._gt=1;e.play().catch(()=>{});return true},
  bgm(k){const n=k&&this.el[k];if(this.cb&&this.cb!==n)this.cb._gt=0;this.cb=n||null;if(n){n.currentTime=0;n._g=0;n._gt=1;n.play().catch(()=>{})}return !!n},
  tick(){const s=A.v&&A.v.s,mu=s&&s.mute,bg=s&&s.bgm===false;Object.keys(this.el).forEach(k=>{const e=this.el[k],b=k.indexOf('bgm_')===0;
   if(e._g!==e._gt){const st=100/e._fd;e._g=e._g<e._gt?Math.min(e._gt,e._g+st):Math.max(e._gt,e._g-st);if(e._g<=0&&b&&e!==this.cb)e.pause()}
   e.volume=Math.max(0,Math.min(1,e._g*(e._c.vol/100)*((mu||(b&&bg))?0:1)*((b&&Bgm.duck)?.35:1)))})},
- prev(k){const c=(A.au||{})[k];if(!c)return;if(A.pv){A.pv.pause();A.pv=null;if(A.pvk===k){A.pvk=null;return}}A.pvk=k;const a=new Audio(AU.url(c.id));a.loop=!!c.loop;a.volume=c.vol/100;a.onerror=()=>{if(!a._alt){a._alt=1;a.src=AU.url(c.id,1);a.play().catch(()=>{})}};a.play().catch(()=>toast('Tidak bisa memutar. Cek berkas/izin berbagi.',1));A.pv=a}};
+ async prev(k){const c=(A.au||{})[k];if(!c)return;if(A.pv){A.pv.pause();A.pv=null;if(A.pvk===k){A.pvk=null;return}}A.pvk=k;toast('Memuat audio…');
+  try{const a=new Audio(await auBlob(c));a.loop=!!c.loop;a.volume=c.vol/100;A.pv=a;await a.play()}catch(e){toast('Gagal memutar: '+(e.message||'format tidak didukung'),1)}}};
 setInterval(()=>AU.tick(),100);
 [['buzz','sfx_buzz'],['bad','sfx_salah']].forEach(x=>{const o=Snd[x[0]];Snd[x[0]]=function(){if(!AU.sfx(x[1]))o.apply(this,arguments)}});
 function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='id-ID';u.rate=.95;u.onstart=()=>{Bgm.duck=1};u.onend=u.onerror=()=>{Bgm.duck=0};speechSynthesis.speak(u)}catch(e){}}
