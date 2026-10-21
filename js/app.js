@@ -30,7 +30,7 @@ const M={idle:{ms:320,v:.06,w:'triangle',m:1,ch:[[220,261.6,329.6],[174.6,220,26
 const Bgm={k:'',h:null,n:0,duck:0,
  set(k){if(!A.audio||(k===this.k&&(this.h||AU.cb)))return;this.k=k;this.n=0;clearInterval(this.h);this.h=null;if(AU.bgm('bgm_'+k))return;if(Snd.c)this.h=setInterval(()=>this.tick(),M[k].ms)},
  stop(){clearInterval(this.h);this.h=null;this.k='';AU.bgm(null)},
- tick(){const s=A.v&&A.v.s;if(!Snd.c||!s||s.mute||s.bgm===false)return;const c=M[this.k],d=this.duck?.35:1,ch=c.ch[(this.n>>3)%c.ch.length],f=ch[this.n%3]*(this.n%8>=4?c.m:1);Snd.t(f,.4,c.w,c.v*d);if(this.n%8===0)ch.forEach(x=>Snd.t(x/2,1.6,'sine',c.v*.8*d));if(this.k==='tense'&&this.n%4===0)Snd.t(60,.25,'sine',.18*d);this.n++}};
+ tick(){const s=A.v&&A.v.s;if(!Snd.c||!s||s.mute||s.bgm===false)return;const c=M[this.k],d=A.dg,ch=c.ch[(this.n>>3)%c.ch.length],f=ch[this.n%3]*(this.n%8>=4?c.m:1);Snd.t(f,.4,c.w,c.v*d);if(this.n%8===0)ch.forEach(x=>Snd.t(x/2,1.6,'sine',c.v*.8*d));if(this.k==='tense'&&this.n%4===0)Snd.t(60,.25,'sine',.18*d);this.n++}};
 // Audio kustom: diambil lewat Apps Script → blob (di-cache di browser), crossfade BGM, loop & volume per slot
 async function auBlob(c){const key='/hsn-audio/'+c.id;try{const ca=await caches.open('hsn-au'),h=await ca.match(key);if(h)return URL.createObjectURL(await h.blob())}catch(e){}
  const r=await call('getAudio',{id:c.id},180000);if(!r.success)throw new Error(r.message||'gagal memuat');const bin=atob(r.data),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);const b=new Blob([u],{type:r.mime||'audio/mpeg'});
@@ -42,14 +42,24 @@ const AU={el:{},cb:null,q:Promise.resolve(),
    e._c=cfg[k];e.loop=!!cfg[k].loop})},
  sfx(k){const e=this.el[k];if(!e||!e.src)return false;e.currentTime=0;e._g=1;e._gt=1;e.play().catch(()=>{});return true},
  bgm(k){const n=k&&this.el[k];if(this.cb&&this.cb!==n)this.cb._gt=0;this.cb=n||null;if(n){n.currentTime=0;n._g=0;n._gt=1;n.play().catch(()=>{})}return !!n},
- tick(){const s=A.v&&A.v.s,mu=s&&s.mute,bg=s&&s.bgm===false;Object.keys(this.el).forEach(k=>{const e=this.el[k],b=k.indexOf('bgm_')===0;
+ tick(){const s=A.v&&A.v.s,mu=s&&s.mute,bg=s&&s.bgm===false,vo=Object.assign({},VO,(s&&s.vo)||{}),tg=(Bgm.spk>0||Date.now()<Bgm.hold)?vo.duck/100:1;A.dg+=(tg-A.dg)*(tg<A.dg?.3:.08);Object.keys(this.el).forEach(k=>{const e=this.el[k],b=k.indexOf('bgm_')===0;
   if(e._g!==e._gt){const st=100/e._fd;e._g=e._g<e._gt?Math.min(e._gt,e._g+st):Math.max(e._gt,e._g-st);if(e._g<=0&&b&&e!==this.cb)e.pause()}
-  e.volume=Math.max(0,Math.min(1,e._g*(e._c.vol/100)*((mu||(b&&bg))?0:1)*((b&&Bgm.duck)?.35:1)))})},
+  e.volume=Math.max(0,Math.min(1,e._g*(e._c.vol/100)*((mu||(b&&bg))?0:1)*(b?A.dg:1)))})},
  async prev(k){const c=(A.au||{})[k];if(!c)return;if(A.pv){A.pv.pause();A.pv=null;if(A.pvk===k){A.pvk=null;return}}A.pvk=k;toast('Memuat audio…');
   try{const a=new Audio(await auBlob(c));a.loop=!!c.loop;a.volume=c.vol/100;A.pv=a;await a.play()}catch(e){toast('Gagal memutar: '+(e.message||'format tidak didukung'),1)}}};
 setInterval(()=>AU.tick(),100);
 [['buzz','sfx_buzz'],['bad','sfx_salah']].forEach(x=>{const o=Snd[x[0]];Snd[x[0]]=function(){if(!AU.sfx(x[1]))o.apply(this,arguments)}});
-function speak(t){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='id-ID';u.rate=.95;u.onstart=()=>{Bgm.duck=1};u.onend=u.onerror=()=>{Bgm.duck=0};speechSynthesis.speak(u)}catch(e){}}
+// Narator: kalimat per kalimat, scene menunggu narator selesai, ducking BGM halus & stabil
+const VO={open:"Assalamu'alaikum warahmatullahi wabarakatuh. Selamat datang di Hari Santri Nasional Arena, Sunan Ampel. Mari kita sambut para peserta.",peserta:'Peserta nomor {no}. {nama}. Kelas {kelas}.',tutup:'Selamat bertanding untuk seluruh peserta. Semoga sukses. Mari kita mulai!',rate:90,duck:45,vol:100,vn:''};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const fill=(t,i,s)=>{let x=String(t).replace(/\{total\}/g,s.tm.length);if(i!=null&&s.tm[i])x=x.replace(/\{no\}/g,i+1).replace(/\{nama\}/g,s.tm[i].n).replace(/\{kelas\}/g,s.tm[i].i);return x};
+function one(p,vo,force){return new Promise(res=>{const est=Math.max(1500,p.length*85/(vo.rate/100)+1000),mu=!force&&A.v&&A.v.s.mute;
+ if(!(A.audio||force)||mu||typeof speechSynthesis==='undefined'){setTimeout(res,est);return}
+ let done=0,on=0;const fin=()=>{if(done)return;done=1;clearTimeout(tm);if(on)Bgm.spk--;Bgm.hold=Date.now()+900;res()},tm=setTimeout(fin,est*2+3000);
+ try{const u=new SpeechSynthesisUtterance(p);u.lang='id-ID';u.rate=vo.rate/100;u.volume=Math.min(1,vo.vol/100);if(vo.vn){const v=speechSynthesis.getVoices().find(x=>x.name===vo.vn);if(v)u.voice=v}u.onstart=()=>{if(!done&&!on){on=1;Bgm.spk++}};u.onend=u.onerror=fin;speechSynthesis.speak(u)}catch(e){fin()}})}
+async function speakP(text,ok,vo,force){vo=vo||Object.assign({},VO,(A.v&&A.v.s.vo)||{});const parts=String(text).match(/[^.!?]+[.!?]*/g)||[];for(const p of parts){if(ok&&!ok())return;if(p.trim()){await one(p.trim(),vo,force);await sleep(220)}}}
+function speak(t){try{speechSynthesis.cancel()}catch(e){}setTimeout(()=>speakP(t),80)}
+Bgm.spk=0;Bgm.hold=0;A.dg=1;
 
 // ── Data & tampilan ──
 const rank=s=>s.tm.map(t=>Object.assign({},t,{p:s.sc[t.id].n,x:s.sc[t.id].x,st:s.sc[t.id].st})).sort((a,b)=>b.p-a.p).map((t,i)=>Object.assign(t,{r:i+1}));
@@ -73,7 +83,7 @@ const startOv='<div class="ov" style="z-index:90"><div class="card act br"><h2>M
 const exitOv='<div class="ov" style="z-index:70"><div class="card act"><h2>Keluar dari layar IFP</h2><p class="mut" style="margin:6px 0 4px">Konfirmasi dengan PIN moderator atau admin.</p><label for="xpin">PIN</label><input id="xpin" type="password" inputmode="numeric" autocomplete="off"><div class="row" style="margin-top:12px"><button data-act="xc">Batal</button><button class="er" data-act="xk">Keluar</button></div></div></div>';
 const wheelOv=W=>`<div class="ov" style="z-index:60"><div style="text-align:center"><h2 style="margin-bottom:12px">Roda giliran menjawab</h2><div class="whl"><canvas id="wc" width="600" height="600"></canvas><i></i></div><h1 id="wn" style="margin-top:16px;visibility:hidden">${esc(W.n)} · ${esc(W.i)}</h1></div></div>`;
 const I0=12000,IP=5000,IC=7000;
-function iscene(s){const a=Date.now()+A.off-s.intro.k,N=s.tm.length;if(a<0||a>=I0+N*IP+IC)return -9;if(a<I0)return -1;const i=Math.floor((a-I0)/IP);return i<N?i:N}
+function iscene(s){return(s.intro&&A.ik===s.intro.k&&A.isc!=null)?A.isc:-9} // scene digerakkan sequencer, bukan jam
 function bn(s){return !!(s.rt&&s.res&&Date.now()+A.off-s.rt<(s.res==='lempar'?2200:3000))}
 function bgmMode(s){if(s.intro&&iscene(s)>-9)return 'intro';if(s.done)return 'win';const t=s.t;if(t.st==='run'&&t.end&&(t.end-(Date.now()+A.off))/1000<=5)return 'crit';return(s.show&&!s.res)?'tense':'idle'}
 const slideOf=s=>s.done?'skor':(s.sl==='skor'&&bn(s)&&s.res!=='lempar')?'soal':(s.sl||'soal');
@@ -83,13 +93,16 @@ function introV(s){const sc=iscene(s),N=s.tm.length,ex='<button data-act="xo" st
  const t=s.tm[sc];return `<div class="intro">${ex}<div class="p ${sc%2?'rv':''}"><div class="l"><span class="tag gd">PESERTA ${sc+1} / ${N}</span><h1 class="gdt" style="margin:10px 0">${esc(t.n)}</h1><h2 class="mut">${esc(t.i)}</h2></div><div class="r">${t.f?`<img src="${esc(t.f)}" alt="">`:`<div class="ph0">${ini(t.n)}</div>`}</div></div></div>`}
 function bannerV(s){const t=s.tm.find(x=>x.id===(s.res==='lempar'?(s.out||[]).slice(-1)[0]:s.pj)),m={benar:['ok','✓','JAWABAN BENAR','+'+s.q.bobot+' POIN'],salah:['er','✕','JAWABAN SALAH','−'+s.salah+' POIN'],lempar:['gd','↷','DILEMPAR','Rebutan dibuka untuk peserta lain'],gugur:['gd','∅','SOAL GUGUR','Tanpa poin']}[s.res]||['gd','','',''];
  return `<div class="rbn b-${m[0]}"><div class="ic">${m[1]}</div><h1>${m[2]}</h1><h2>${t?esc(t.n)+' · ':''}${m[3]}</h2></div>`}
-function introSfx(sc,s){const N=s.tm.length;Snd.whoosh();
- if(sc===-1){Snd.sting();speak("Assalamu'alaikum warahmatullahi wabarakatuh. Selamat datang di Hari Santri Nasional Arena, Sunan Ampel. Mari kita sambut para peserta.")}
- else if(sc>=N){Snd.ok();Snd.clap();speak('Selamat bertanding untuk seluruh peserta. Semoga sukses. Mari kita mulai!')}
- else{Snd.pop(2);const t=s.tm[sc];speak('Peserta nomor '+(sc+1)+'. '+t.n+'. Kelas '+t.i+'.')}}
+function introSfx(sc,s){const N=s.tm.length;Snd.whoosh();if(sc===-1)Snd.sting();else if(sc>=N){Snd.ok();Snd.clap()}else Snd.pop(2)}
+async function runIntro(s){const tok=A.rt,N=s.tm.length,vo=Object.assign({},VO,s.vo||{}),ok=()=>tok===A.rt;
+ const step=async(sc,text,min,gap)=>{if(!ok())return false;A.isc=sc;paint();if(A.audio)introSfx(sc,s);Bgm.hold=Date.now()+900;const t0=Date.now();await sleep(450);if(!ok())return false;await speakP(text,ok,vo);if(!ok())return false;const rest=min-(Date.now()-t0);if(rest>0)await sleep(rest);Bgm.hold=Date.now()+gap+400;await sleep(gap);return ok()};
+ if(!await step(-1,fill(vo.open,null,s),8000,1400))return;
+ for(let i=0;i<N;i++)if(!await step(i,fill(vo.peserta,i,s),4000,800))return;
+ if(!await step(N,fill(vo.tutup,null,s),5500,1800))return;
+ A.isc=-9;paint()}
 function skorSfx(s){if(AU.sfx('sfx_skor'))return;Snd.whoosh();s.tm.forEach((t,i)=>setTimeout(()=>Snd.pop(i),300+i*450));if(s.done)setTimeout(()=>{Snd.ok();Snd.clap()},500)}
 function ifpTick(s){if(A.mode!=='ifp')return;
- if(s.intro){const sc=iscene(s),key=s.intro.k+':'+sc;if(key!==A.ik){A.ik=key;paint();if(A.audio){if(sc>-9)introSfx(sc,s);else try{speechSynthesis.cancel()}catch(e){}}}}
+ const ik=s.intro?s.intro.k:null;if(ik!==A.ik){A.ik=ik;A.rt=(A.rt||0)+1;try{speechSynthesis.cancel()}catch(e){}if(ik&&Date.now()+A.off-ik<8000)runIntro(s);else{A.isc=-9;paint()}}
  const b=bn(s)?1:0;if(b!==A.bl){A.bl=b;paint()}
  if(A.audio)Bgm.set(bgmMode(s))}
 function ifpV(s){const q=s.q,sl=slideOf(s),ch=A.psl!==sl,rs=RES[s.res],sp=s.spin,age=sp?Date.now()+A.off-sp.k:1e9,W=sp&&s.tm.find(t=>t.id===sp.pid),H=s.tm.find(t=>t.id===s.lock)||s.tm.find(t=>t.id===(s.turn||{}).pid);
@@ -136,7 +149,7 @@ function admV(){const D=A.adm;if(!D){loadAdm();return '<div class="wrap"><div cl
   b=tb+`<div class="scr"><table><tr>${ix.map(k=>`<th>${lb(d.cols[k])}</th>`).join('')}<th></th></tr>${d.rows.map((r,i)=>`<tr>${ix.map(k=>`<td>${esc(P&&k===4?(r[4]?'✓':'–'):String(r[k]).slice(0,60))}</td>`).join('')}<td style="white-space:nowrap"><button data-act="ed:${i}">Ubah</button> <button class="er" data-act="dl:${esc(r[0])}">Hapus</button></td></tr>`).join('')}</table></div>
   <h3 style="margin-top:12px">${A.ef?'Ubah':'Tambah'} ${t}</h3><form id="af" onsubmit="return false">${d.cols.filter(show).map(c=>`<label>${lb(c)}</label><input name="${c}" value="${esc(A.ef?A.ef[c]:'')}" ${c.indexOf('ID_')===0?'placeholder="otomatis jika kosong"':''}>`).join('')}</form><button class="ok" style="margin-top:12px" data-act="sv">Simpan</button>`}
  return `<div class="wrap"><div class="card"><div class="row" style="margin-bottom:12px">${tabs}</div>${b}</div></div>`}
-function loadAdm(){if(A.ld)return;A.ld=1;call('admData').then(r=>{A.ld=0;if(r.success){A.adm=r.data;A.au=r.au||{};paint()}else toast(r.message,1)})}
+function loadAdm(){if(A.ld)return;A.ld=1;call('admData').then(r=>{A.ld=0;if(r.success){A.adm=r.data;A.au=r.au||{};A.vo=r.vo||{};paint()}else toast(r.message,1)})}
 
 function staffV(s){const adm=A.role==='adm',n=[['arena','Arena'],['skor','Skor']].concat(adm?[['admin','Admin']]:[]).map(x=>`<button class="${A.tab===x[0]?'on':''}" data-act="tab:${x[0]}">${x[1]}</button>`).join('')+'<button data-act="out">Keluar</button>';
  return hdr('Panel '+(adm?'admin':'moderator'),`<nav class="nav">${n}</nav>`)+(A.tab==='skor'?'<div class="wrap">'+lbV(s)+'</div>':A.tab==='admin'&&adm?admV():arena(s))}
@@ -183,7 +196,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]
  else if(k==='at'){A.at=x;A.ef=null;paint()}
  else if(k==='ed'){const d=A.adm[A.at];A.ef={};d.cols.forEach((c,i)=>A.ef[c]=d.rows[+x][i]);paint()}
  else if(k==='dl'){if(!confirm('Hapus data ini?'))return;const r=await call('del',{sheet:A.at,id:x});if(!r.success)return toast(r.message,1);A.adm=null;paint()}
- else if(k==='sv')save();else if(k==='aplay')AU.prev(x);else if(k==='adel'){if(!confirm('Hapus berkas audio ini?'))return;const r=await call('delAudio',{slot:x});if(!r.success)return toast(r.message,1);A.adm=null;paint()}
+ else if(k==='sv')save();else if(k==='vosv')saveVo();else if(k==='vot')testVo();else if(k==='aplay')AU.prev(x);else if(k==='adel'){if(!confirm('Hapus berkas audio ini?'))return;const r=await call('delAudio',{slot:x});if(!r.success)return toast(r.message,1);A.adm=null;paint()}
  else if(k==='nm'){b.disabled=true;const r=await call('newMatch',{nama:$('#mn').value,perTurn:+$('#mt').value,lolos:+$('#ml').value,paket:$('#mk').value,ids:[...document.querySelectorAll('.pk:checked')].map(c=>c.value)});b.disabled=false;if(!r.success)return toast(r.message,1);const bt=await call('boot');if(bt.success)setV(bt);A.tab='arena';A.adm=null;toast('Pertandingan aktif');paint()}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pin')document.querySelector('[data-act="lg"]').click();if(e.key==='Enter'&&e.target.id==='xpin')document.querySelector('[data-act="xk"]').click()});
 document.addEventListener('input',e=>{if(e.target.id==='fq')flt()});document.addEventListener('change',e=>{if(e.target.id==='ff')flt()});
@@ -192,7 +205,17 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()});
 
 // ── Admin: pustaka audio ──
 const SLOTS=[['bgm_intro','BGM Pembukaan'],['bgm_idle','BGM Tema Utama (sebelum soal)'],['bgm_tense','BGM Soal Berjalan (tegang)'],['bgm_crit','BGM Waktu Kritis (≤5 detik)'],['bgm_win','BGM Kemenangan / Klasemen akhir'],['sfx_buzz','SFX Buzzer ditekan'],['sfx_benar','SFX Jawaban Benar'],['sfx_salah','SFX Jawaban Salah'],['sfx_roda','SFX Roda giliran berputar'],['sfx_skor','SFX Slide skor muncul']];
-function audV(){const U=A.au||{};return `<p class="mut" style="margin-bottom:10px">Unggah MP3/M4A/WAV (maks 10 MB, disarankan ≤5 MB). Slot kosong memakai suara bawaan. Atur <b>Loop</b> dan <b>Volume</b> per slot. Unggah sebelum pertandingan dimulai, lalu muat ulang layar IFP dan ketuk "Mulai Arena".</p>`+SLOTS.map(x=>{const k=x[0],c=U[k];return `<div class="lb" style="flex-wrap:wrap"><div style="flex:1 1 220px"><h3>${x[1]}</h3><span class="mut">${c?esc(c.name):'(bawaan)'}</span></div><label class="tag" style="cursor:pointer;margin:0">${c?'Ganti':'Unggah'}<input type="file" accept="audio/*" hidden data-au="${k}"></label>${c?`<label style="margin:0;display:flex;gap:6px;align-items:center;letter-spacing:0"><input type="checkbox" data-aloop="${k}" ${c.loop?'checked':''} style="width:20px;min-height:20px"> Loop</label><input type="range" min="5" max="100" value="${c.vol}" data-avol="${k}" style="width:130px;min-height:30px" aria-label="Volume ${x[1]}"><button data-act="aplay:${k}">▶ Uji</button><button class="er" data-act="adel:${k}">Hapus</button>`:''}</div>`}).join('')}
+const voices=()=>{try{return speechSynthesis.getVoices().filter(x=>/^id/i.test(x.lang)).map(x=>x.name)}catch(e){return[]}};
+try{speechSynthesis.onvoiceschanged=()=>{if(A.mode==='staff'&&A.tab==='admin'&&A.at==='Audio')paint()}}catch(e){}
+function voV(){const v=Object.assign({},VO,A.vo||{});return `<div class="card" style="margin-bottom:12px"><h3>Naskah narator & keseimbangan suara</h3><p class="mut" style="margin:4px 0 8px;text-transform:none">Pakai {nama}, {kelas}, {no}, {total} pada kalimat peserta. Narator membaca kalimat demi kalimat dan layar baru pindah setelah selesai. Musik otomatis turun halus saat narator bicara.</p>
+<label for="vo_open">Kalimat pembukaan</label><textarea id="vo_open" rows="3">${esc(v.open)}</textarea><label for="vo_peserta">Kalimat tiap peserta</label><input id="vo_peserta" value="${esc(v.peserta)}"><label for="vo_tutup">Kalimat penutup</label><textarea id="vo_tutup" rows="2">${esc(v.tutup)}</textarea>
+<label for="vo_vn">Suara narator (daftar dari perangkat ini)</label><select id="vo_vn"><option value="">Otomatis (Indonesia)</option>${voices().map(n=>`<option ${n===v.vn?'selected':''}>${esc(n)}</option>`).join('')}</select>
+<div class="row"><div><label for="vo_rate">Kecepatan bicara (%)</label><input id="vo_rate" type="number" min="50" max="130" value="${v.rate}"></div><div><label for="vo_vol">Volume narator (%)</label><input id="vo_vol" type="number" min="10" max="100" value="${v.vol}"></div><div><label for="vo_duck">Musik saat narator bicara (% dari volume normal)</label><input id="vo_duck" type="number" min="10" max="100" value="${v.duck}"></div></div>
+<div class="row" style="margin-top:10px"><button data-act="vot">▶ Uji narator</button><button class="ok" data-act="vosv">Simpan naskah</button></div></div>`}
+function readVo(){const g=i=>$('#vo_'+i).value;return{open:g('open'),peserta:g('peserta'),tutup:g('tutup'),vn:g('vn'),rate:+g('rate'),vol:+g('vol'),duck:+g('duck')}}
+async function saveVo(){const r=await call('setVoice',readVo());if(!r.success)return toast(r.message,1);toast('Naskah tersimpan');A.adm=null;paint()}
+function testVo(){const v=Object.assign({},VO,readVo()),s={tm:[{n:'Ahmad Zaki',i:'8A'}]};try{speechSynthesis.cancel()}catch(e){}setTimeout(()=>speakP(fill(v.open,null,s)+' '+fill(v.peserta,0,s),null,v,true),80)}
+function audV(){const U=A.au||{};return voV()+`<p class="mut" style="margin-bottom:10px">Unggah MP3/M4A/WAV (maks 10 MB, disarankan ≤5 MB). Slot kosong memakai suara bawaan. Atur <b>Loop</b> dan <b>Volume</b> per slot. Unggah sebelum pertandingan dimulai, lalu muat ulang layar IFP dan ketuk "Mulai Arena".</p>`+SLOTS.map(x=>{const k=x[0],c=U[k];return `<div class="lb" style="flex-wrap:wrap"><div style="flex:1 1 220px"><h3>${x[1]}</h3><span class="mut">${c?esc(c.name):'(bawaan)'}</span></div><label class="tag" style="cursor:pointer;margin:0">${c?'Ganti':'Unggah'}<input type="file" accept="audio/*" hidden data-au="${k}"></label>${c?`<label style="margin:0;display:flex;gap:6px;align-items:center;letter-spacing:0"><input type="checkbox" data-aloop="${k}" ${c.loop?'checked':''} style="width:20px;min-height:20px"> Loop</label><input type="range" min="5" max="100" value="${c.vol}" data-avol="${k}" style="width:130px;min-height:30px" aria-label="Volume ${x[1]}"><button data-act="aplay:${k}">▶ Uji</button><button class="er" data-act="adel:${k}">Hapus</button>`:''}</div>`}).join('')}
 async function upAudio(slot,f){if(f.size>10*1048576)return toast('Berkas terlalu besar (maks 10 MB)',1);toast('Mengunggah '+f.name+'… jangan tutup halaman');
  const data=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f)});
  const r=await call('upAudio',{slot:slot,name:f.name,data:data},180000);if(!r.success)return toast(r.message,1);toast('Audio tersimpan');A.adm=null;paint()}
