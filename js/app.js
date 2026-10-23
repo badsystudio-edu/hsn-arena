@@ -64,7 +64,7 @@ Bgm.spk=0;Bgm.hold=0;A.dg=1;
 // ── Data & tampilan ──
 const rank=s=>s.tm.map(t=>Object.assign({},t,{p:s.sc[t.id].n,x:s.sc[t.id].x,st:s.sc[t.id].st})).sort((a,b)=>b.p-a.p).map((t,i)=>Object.assign(t,{r:i+1}));
 const ini=n=>esc(String(n).replace(/^Regu /,'').slice(0,2).toUpperCase());
-const VER='2.0';
+const VER='2.1';
 const hdr=(sub,nav)=>`<header class="top"><div><h1>HSN Arena <span class="tag gd">Sunan Ampel</span></h1><small>${sub} · v${VER}</small></div>${nav||''}<div class="sg" style="text-align:right"><b id="clk" style="font-size:20px">--:--:--</b><small>WIB · SYNC AKTIF</small></div></header>`;
 const ring='<div class="ring" id="rn"><svg width="150" height="150"><circle cx="75" cy="75" r="66" fill="none" stroke="#1E3A4B" stroke-width="8"/><circle id="rg" cx="75" cy="75" r="66" fill="none" stroke="#00F2FE" stroke-width="8" stroke-linecap="round" stroke-dasharray="415"/></svg><b class="tm">00</b></div>';
 const RES={benar:['ok','JAWABAN BENAR'],salah:['er','JAWABAN SALAH'],lempar:['gd','DILEMPAR — REBUTAN ULANG'],gugur:['gd','SOAL GUGUR']};
@@ -114,11 +114,12 @@ function ifpTick(s){if(A.mode!=='ifp')return;
  const wk=s.wn?s.wn.k:null;if(wk!==A.wk){A.wk=wk;A.rw=(A.rw||0)+1;try{speechSynthesis.cancel()}catch(e){}if(wk&&Date.now()+A.off-wk<8000)runWin(s);else{A.ws=wk?4:-9;paint()}}
  const b=bn(s)?1:0;if(b!==A.bl){A.bl=b;paint()}
  if(A.audio)Bgm.set(bgmMode(s))}
-function ifpV(s){const q=s.q,sl=slideOf(s),ch=A.psl!==sl,op=s.show&&!A.pshow,cl=!s.show&&A.pshow&&A.lq&&A.psl==='soal',rs=RES[s.res],sp=s.spin,age=sp?Date.now()+A.off-sp.k:1e9,W=sp&&s.tm.find(t=>t.id===sp.pid),H=s.tm.find(t=>t.id===s.lock)||s.tm.find(t=>t.id===(s.turn||{}).pid);
+function ifpV(s){const q=s.q,sl=slideOf(s),ch=A.psl!==sl,op=s.show&&!A.pshow,cl=!s.show&&A.pshow&&A.lq&&A.psl==='soal',go=s.show&&A.pshow===false,gc=!s.show&&A.pshow===true,rs=RES[s.res],sp=s.spin,age=sp?Date.now()+A.off-sp.k:1e9,W=sp&&s.tm.find(t=>t.id===sp.pid),H=s.tm.find(t=>t.id===s.lock)||s.tm.find(t=>t.id===(s.turn||{}).pid);
  const head=hdr('Stage 1 · IFP · '+esc(s.nama),'<span class="tag ok"><i class="dot"></i> TERHUBUNG</span> '+(fsOk()?'<button data-act="fs" style="min-height:40px">'+(fsOn()?'Keluar layar penuh':'⛶ Layar penuh')+'</button> ':'')+'<button data-act="xo" style="min-height:40px">Keluar</button>')+(A.audio?'':startOv())+(A.xo?exitOv:'')+(age<12000&&W?wheelOv(W):'')+(s.intro&&iscene(s)>-9?introV(s):'')+(bn(s)?bannerV(s):'');
  if(s.show)A.lq={text:q.text,img:q.img};if(cl)A.pcl=1;if(s.cover)return head+coverV(s);if(s.wn&&wnOn(s))return head+podiumV(s);if(sl==='skor')return head+`<div class="wrap sl sk ${ch?'in':''}"><div class="row sp" style="margin-bottom:14px"><h1>${s.done?'Klasemen akhir':'Skor sementara'}</h1><span class="tag gd">${s.done?'SELESAI':'SETELAH SOAL '+q.no+' / '+q.tot}</span></div><div class="pcs" style="justify-content:center">${rank(s).map((t,i)=>pcard(t,s,ch?i:null,false,i+1)).join('')}</div></div>`;
+ const gate=bgUrl(s)?(!s.show?gateV(s,gc?'closing':'closed'):(go?gateV(s,'opening'):'')):'';
  const chips=s.buz?`<div class="row" style="margin-top:14px">${s.tm.filter(t=>!s.sc[t.id].x&&s.out.indexOf(t.id)<0).map(t=>`<button class="chip" data-act="buzz" data-id="${t.id}">${t.f?`<img src="${esc(t.f)}" alt="">`:`<div class="ph0">${ini(t.n)}</div>`}<b class="sg" style="font-size:13px">${esc(t.n)}</b></button>`).join('')}</div>`:'';
- return head+`<div class="wrap grid g2 sl ${ch?'in':''}"><div class="card br act" style="min-height:62vh"><div class="row sp"><span class="tag gd">SOAL ${q.no} / ${q.tot}</span><span class="tag">${esc(q.kat||'')}</span><span class="tag gd">+${q.bobot} POIN</span></div>
+ return head+gate+`<div class="wrap grid g2 sl ${ch?'in':''}"><div class="card br act" style="min-height:62vh"><div class="row sp"><span class="tag gd">SOAL ${q.no} / ${q.tot}</span><span class="tag">${esc(q.kat||'')}</span><span class="tag gd">+${q.bobot} POIN</span></div>
  ${(cl?A.lq.img:(s.show?q.img:''))?`<img class="qi" src="${esc(cl?A.lq.img:q.img)}" alt="">`:''}<div class="q ${(cl?A.lq.text:q.text)?'':'ph'} ${op?'qo':''} ${cl?'qc':''}">${(cl?A.lq.text:q.text)?esc(cl?A.lq.text:q.text):'MENUNGGU MODERATOR…'}</div>${s.ans?`<div class="aj">Jawaban: ${esc(s.aj)}</div>`:''}
  <div class="row sp" style="margin-top:10px"><span class="tag ${s.buz?'ok':''}">${s.buz?'REBUTAN TERBUKA — TEKAN NAMAMU!':H?'MENJAWAB: '+esc(H.n):'MENUNGGU GILIRAN'}</span>${rs?`<span class="tag ${rs[0]==='ok'?'ok':rs[0]==='er'?'er':'gd'}">${rs[1]}</span>`:''}</div>${chips}</div>
  <div class="grid"><div class="card">${ring}<p class="sg mut" style="text-align:center;margin-top:8px">SISA WAKTU (DETIK)</p></div>${H&&!s.buz?`<div><p class="sg mut" style="margin-bottom:6px">GILIRAN MENJAWAB</p><div class="pcs">${pcard(H,s,null,false)}</div></div>`:''}</div></div>`}
@@ -173,7 +174,7 @@ function events(p,s){ // efek suara & narator di layar IFP saja
  if(A.mode==='ifp'&&A.audio&&p){
   if(p.buz&&!s.buz&&s.lock&&s.lock!==p.lock&&s.lock!==A.sb)Snd.buzz();
   const k=s.q.no+s.res+(s.pj||'');if(s.res&&k!==A.pk){if(s.res==='benar'){if(!AU.sfx('sfx_benar')){Snd.ok();Snd.clap()}}else if(s.res==='salah'||s.res==='gugur')Snd.bad();else Snd.whoosh()}
-  if(!p.show&&s.show)Snd.whoosh();if(!p.ans&&s.ans)Snd.reveal();if(p.q.no!==s.q.no)Snd.chime();
+  if(!p.show&&s.show)Snd.door();if(p.show&&!s.show)Snd.door();if(!p.ans&&s.ans)Snd.reveal();if(p.q.no!==s.q.no)Snd.chime();
   if(s.read!==p.read&&s.q.text)speak(s.q.text)}
  A.pk=s.q.no+s.res+(s.pj||'');A.sb=null}
 function setV(r){const p=A.v&&A.v.s;A.v={v:r.v,now:r.now,s:r.s,kunci:r.kunci,cat:r.cat};A.ver=r.v;A.off=r.now-Date.now();if(A.mode!=='staff'&&A.mode!=='login')LS.s('view',JSON.stringify(A.v));if(A.mode==='ifp')AU.load(r.s.au||{});events(p,r.s);paint()}
@@ -240,7 +241,10 @@ document.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.
 
 // ── Gambar latar, sampul, panggung juara, revisi skor ──
 const bgUrl=s=>{const c=(s.au||{}).img_bg;return c?(AU.im['img_bg:'+c.id]||''):''};
-const ifpWrap=s=>{const u=bgUrl(s);return '<div class="ifp" style="--bgi:'+(u?"url('"+u+"')":'none')+'">'+ifpV(s)+'</div>'};
+const ifpWrap=s=>'<div class="ifp" style="--bgi:none">'+ifpV(s)+'</div>';
+// Foto = slide pertama tiap soal: pintu terbuka saat soal ditampilkan, tertutup lagi saat lanjut soal berikutnya
+const gateV=(s,mode)=>`<div class="gate ${mode}"><div class="dr l" style="background-image:url('${bgUrl(s)}')"></div><div class="dr r" style="background-image:url('${bgUrl(s)}')"></div>${mode==='opening'?'':cornerBtns}</div>`;
+Snd.door=function(){this.nz(.9,.2,320);this.t(70,.5,'sine',.25,.9)};
 const cornerBtns='<button data-act="xo" style="position:absolute;top:10px;right:10px;z-index:3;opacity:.35;min-height:36px">Keluar</button><button data-act="fs" style="position:absolute;top:10px;right:90px;z-index:3;opacity:.35;min-height:36px">⛶</button>';
 const coverV=s=>{const u=bgUrl(s);return `<div class="cover" style="${u?`background-image:url('${u}')`:''}">${u?'':`<div class="cv-t"><span class="tag gd">Hari Santri Nasional</span><h1>HSN ARENA</h1><h2 style="color:var(--cy);font-size:clamp(24px,4vw,56px)">Sunan Ampel</h2><p class="mut" style="margin-top:14px;font-size:20px">${esc(s.nama)}</p></div>`}${cornerBtns}</div>`};
 const WS={3:1,2:2,1:3};
