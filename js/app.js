@@ -64,7 +64,7 @@ Bgm.spk=0;Bgm.hold=0;A.dg=1;
 // ── Data & tampilan ──
 const rank=s=>s.tm.map(t=>Object.assign({},t,{p:s.sc[t.id].n,x:s.sc[t.id].x,st:s.sc[t.id].st})).sort((a,b)=>b.p-a.p).map((t,i)=>Object.assign(t,{r:i+1}));
 const ini=n=>esc(String(n).replace(/^Regu /,'').slice(0,2).toUpperCase());
-const VER='2.1';
+const VER='2.2';
 const hdr=(sub,nav)=>`<header class="top"><div><h1>HSN Arena <span class="tag gd">Sunan Ampel</span></h1><small>${sub} · v${VER}</small></div>${nav||''}<div class="sg" style="text-align:right"><b id="clk" style="font-size:20px">--:--:--</b><small>WIB · SYNC AKTIF</small></div></header>`;
 const ring='<div class="ring" id="rn"><svg width="150" height="150"><circle cx="75" cy="75" r="66" fill="none" stroke="#1E3A4B" stroke-width="8"/><circle id="rg" cx="75" cy="75" r="66" fill="none" stroke="#00F2FE" stroke-width="8" stroke-linecap="round" stroke-dasharray="415"/></svg><b class="tm">00</b></div>';
 const RES={benar:['ok','JAWABAN BENAR'],salah:['er','JAWABAN SALAH'],lempar:['gd','DILEMPAR — REBUTAN ULANG'],gugur:['gd','SOAL GUGUR']};
@@ -133,7 +133,7 @@ function pantauV(s){return hdr('Live scoreboard · read-only','<button data-act=
  <div class="row" style="margin-bottom:12px"><input id="fq" placeholder="Cari regu atau pesantren…" aria-label="Cari"><select id="ff" aria-label="Filter"><option value="">Semua regu</option><option value="top">Peringkat teratas</option><option value="safe">Status aman</option><option value="out">Gugur</option></select></div>${lbV(s)}</div>`}
 function flt(){const q=($('#fq')||{}).value,f=($('#ff')||{}).value;document.querySelectorAll('.lb[data-n]').forEach(e=>{e.hidden=!!((q&&e.dataset.n.indexOf(q.toLowerCase())<0)||(f==='top'&&+e.dataset.r>2)||(f==='safe'&&e.dataset.x==='1')||(f==='out'&&e.dataset.x!=='1'))})}
 
-function arena(s){const q=s.q,L=s.lock&&s.tm.find(t=>t.id===s.lock),can=L&&!s.res;
+function arena(s){const g=s.gm||{},lempOk=g.lempar!==false&&(!g.maxLempar||(s.lc||0)<g.maxLempar),q=s.q,L=s.lock&&s.tm.find(t=>t.id===s.lock),can=L&&!s.res;
  return `<div class="wrap grid g2"><div class="grid"><div class="card br"><div class="row sp"><span class="tag gd">${esc(s.nama)}</span><span class="tag">SOAL ${q.no}/${q.tot}</span><span class="tag gd">+${q.bobot} / −${s.salah}</span></div>
  ${q.img?`<img class="qi" src="${esc(q.img)}" alt="">`:''}<div class="q" style="font-size:20px;padding:14px">${esc(q.text)}</div><div class="card gold" style="padding:10px"><label style="margin:0">Kunci jawaban · hanya moderator</label><b>${esc(A.v.kunci)}</b></div>
  <div class="row" style="margin-top:10px"><button class="ok" data-act="show">Tampilkan ke IFP</button><button data-act="read">Bacakan soal</button></div>
@@ -142,14 +142,14 @@ function arena(s){const q=s.q,L=s.lock&&s.tm.find(t=>t.id===s.lock),can=L&&!s.re
  <div class="row" style="margin-top:8px"><button class="bz" data-act="open" ${s.buz?'disabled':''}>Buka buzzer & mulai rebutan</button><button data-act="close">Kunci semua</button></div>
  <p style="margin-top:10px">${L?'<span class="tag gd">TERKUNCI</span> <b>'+esc(L.n)+'</b>'+(s.bt?' · '+s.bt.ms.toFixed(2)+'s':''):s.buz?'<span class="tag ok">BUZZER TERBUKA</span>':'<span class="tag">BUZZER TERTUTUP</span>'}</p></div></div>
  <div class="grid"><div class="card act"><h3 style="margin-bottom:8px">Keputusan dewan juri</h3><div class="row"><button class="ok" data-act="j:benar" ${can?'':'disabled'}>Benar +${q.bobot}</button><button class="er" data-act="j:salah" ${can?'':'disabled'}>Salah −${s.salah}</button></div>
- <div class="row" style="margin-top:8px"><button data-act="j:lempar" ${can?'':'disabled'}>Lempar</button><button data-act="j:gugur">Soal gugur / waktu habis</button></div></div>
+ <div class="row" style="margin-top:8px"><button data-act="j:lempar" ${can&&lempOk?'':'disabled'}>Lempar${g.lempar===false?' (nonaktif)':g.maxLempar?' ('+(s.lc||0)+'/'+g.maxLempar+')':''}</button><button data-act="j:gugur">Soal gugur / waktu habis</button></div></div>
  <div class="card"><h3 style="margin-bottom:6px">Koreksi manual darurat</h3><select id="mp" aria-label="Regu">${s.tm.map(t=>`<option value="${t.id}">${esc(t.n)} (${s.sc[t.id].n})</option>`).join('')}</select><input id="why" placeholder="Alasan (mis. interupsi juri sah)" style="margin:8px 0" aria-label="Alasan">
  <div class="row">${[-10,-5,5,10].map(x=>`<button data-act="m:${x}">${x>0?'+':''}${x}</button>`).join('')}</div><button class="er" style="margin-top:8px;width:100%" data-act="el">Gugurkan / pulihkan peserta</button></div>
  <button class="gd bz" data-act="nx" ${s.done?'disabled':''}>${q.no>=q.tot?'Tutup pertandingan':'Soal berikutnya ›'}</button><div class="card">${lbV(s)}</div></div></div>`}
 
 function admV(){const D=A.adm;if(!D){loadAdm();return '<div class="wrap"><div class="card">Memuat data admin…</div></div>'}
- const t=A.at,tabs=['Soal','Peserta','Pertandingan','Audio'].map(n=>`<button class="${n===t?'ok':''}" data-act="at:${n}">${n}</button>`).join('');let b;const fb=(l,i)=>`<label class="tag" style="cursor:pointer;margin:0">${l}${i}</label>`;
- if(t==='Audio')b=audV();else if(t==='Pertandingan'){const pk=[...new Set(D.Soal.rows.map(r=>r[2]))];
+ const t=A.at,tabs=['Soal','Peserta','Pertandingan','Audio','Aturan'].map(n=>`<button class="${n===t?'ok':''}" data-act="at:${n}">${n}</button>`).join('');let b;const fb=(l,i)=>`<label class="tag" style="cursor:pointer;margin:0">${l}${i}</label>`;
+ if(t==='Aturan')b=rulV();else if(t==='Audio')b=audV();else if(t==='Pertandingan'){const pk=[...new Set(D.Soal.rows.map(r=>r[2]))];
   b=`<div class="scr"><table><tr><th>ID</th><th>Sesi</th><th>Status</th></tr>${D.Pertandingan.rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[5])}</td></tr>`).join('')}</table></div>
   <h3 style="margin-top:12px">Pertandingan baru</h3><label for="mn">Nama sesi</label><input id="mn" value="Penyisihan"><label for="mk">Paket soal</label><select id="mk">${pk.map(p=>`<option>${esc(p)}</option>`).join('')}</select>
   <div class="row"><div><label for="mt">Soal per giliran</label><input id="mt" type="number" min="1" value="2"></div><div><label for="ml">Jumlah lolos</label><input id="ml" type="number" min="1" value="8"></div></div><label>Peserta</label>
@@ -159,7 +159,7 @@ function admV(){const D=A.adm;if(!D){loadAdm();return '<div class="wrap"><div cl
   b=tb+`<div class="scr"><table><tr>${ix.map(k=>`<th>${lb(d.cols[k])}</th>`).join('')}<th></th></tr>${d.rows.map((r,i)=>`<tr>${ix.map(k=>`<td>${esc(P&&k===4?(r[4]?'✓':'–'):String(r[k]).slice(0,60))}</td>`).join('')}<td style="white-space:nowrap"><button data-act="ed:${i}">Ubah</button> <button class="er" data-act="dl:${esc(r[0])}">Hapus</button></td></tr>`).join('')}</table></div>
   <h3 style="margin-top:12px">${A.ef?'Ubah':'Tambah'} ${t}</h3><form id="af" onsubmit="return false">${d.cols.filter(show).map(c=>`<label>${lb(c)}</label><input name="${c}" value="${esc(A.ef?A.ef[c]:'')}" ${c.indexOf('ID_')===0?'placeholder="otomatis jika kosong"':''}>`).join('')}</form><button class="ok" style="margin-top:12px" data-act="sv">Simpan</button>`}
  return `<div class="wrap"><div class="card"><div class="row" style="margin-bottom:12px">${tabs}</div>${b}</div></div>`}
-function loadAdm(){if(A.ld)return;A.ld=1;call('admData').then(r=>{A.ld=0;if(r.success){A.adm=r.data;A.au=r.au||{};A.vo=r.vo||{};paint()}else toast(r.message,1)})}
+function loadAdm(){if(A.ld)return;A.ld=1;call('admData').then(r=>{A.ld=0;if(r.success){A.adm=r.data;A.au=r.au||{};A.vo=r.vo||{};A.rules=r.rules||{};paint()}else toast(r.message,1)})}
 
 function staffV(s){const adm=A.role==='adm',n=[['arena','Arena'],['skor','Skor']].concat(adm?[['admin','Admin']]:[]).map(x=>`<button class="${A.tab===x[0]?'on':''}" data-act="tab:${x[0]}">${x[1]}</button>`).join('')+'<button data-act="out">Keluar</button>';
  return hdr('Panel '+(adm?'admin':'moderator'),`<nav class="nav">${n}</nav>`)+(A.tab==='skor'?skorV(s):A.tab==='admin'&&adm?admV():arena(s))}
@@ -175,7 +175,8 @@ function events(p,s){ // efek suara & narator di layar IFP saja
   if(p.buz&&!s.buz&&s.lock&&s.lock!==p.lock&&s.lock!==A.sb)Snd.buzz();
   const k=s.q.no+s.res+(s.pj||'');if(s.res&&k!==A.pk){if(s.res==='benar'){if(!AU.sfx('sfx_benar')){Snd.ok();Snd.clap()}}else if(s.res==='salah'||s.res==='gugur')Snd.bad();else Snd.whoosh()}
   if(!p.show&&s.show)Snd.door();if(p.show&&!s.show)Snd.door();if(!p.ans&&s.ans)Snd.reveal();if(p.q.no!==s.q.no)Snd.chime();
-  if(s.read!==p.read&&s.q.text)speak(s.q.text)}
+  if(s.read!==p.read&&s.q.text){A.rr=(A.rr||0)+1;speak(s.q.text)}}
+ if(A.mode==='ifp'&&p){const g=s.gm||{};if(!p.show&&s.show&&g.autoRead!==false&&s.q.text)autoRead(s);if(p.show&&!s.show){A.rr=(A.rr||0)+1;try{speechSynthesis.cancel()}catch(e){}}}
  A.pk=s.q.no+s.res+(s.pj||'');A.sb=null}
 function setV(r){const p=A.v&&A.v.s;A.v={v:r.v,now:r.now,s:r.s,kunci:r.kunci,cat:r.cat};A.ver=r.v;A.off=r.now-Date.now();if(A.mode!=='staff'&&A.mode!=='login')LS.s('view',JSON.stringify(A.v));if(A.mode==='ifp')AU.load(r.s.au||{});events(p,r.s);paint()}
 
@@ -206,7 +207,7 @@ document.addEventListener('click',async e=>{const b=e.target.closest('[data-act]
  else if(k==='at'){A.at=x;A.ef=null;paint()}
  else if(k==='ed'){const d=A.adm[A.at];A.ef={};d.cols.forEach((c,i)=>A.ef[c]=d.rows[+x][i]);paint()}
  else if(k==='dl'){if(!confirm('Hapus data ini?'))return;const r=await call('del',{sheet:A.at,id:x});if(!r.success)return toast(r.message,1);A.adm=null;paint()}
- else if(k==='sv')save();else if(k==='vosv')saveVo();else if(k==='vot')testVo();else if(k==='aimg'){const c=(A.au||{})[x];if(c)auBlob(c).then(u=>window.open(u,'_blank'))}else if(k==='setsc'){doAct({k:'setscore',pid:$('#rp').value,val:$('#rv').value,why:$('#rw').value},b).then(()=>{A.lg=null;loadLog()})}else if(k==='lgr'){A.lg=null;loadLog()}else if(k==='und'){const i=x.lastIndexOf(':'),pid=x.slice(0,i),dl=+x.slice(i+1);if(!confirm('Batalkan perubahan skor ini?'))return;doAct({k:'manual',pid:pid,delta:-dl,why:'Batal entri'},b).then(()=>{A.lg=null;loadLog()})}else if(k==='aplay')AU.prev(x);else if(k==='adel'){if(!confirm('Hapus berkas audio ini?'))return;const r=await call('delAudio',{slot:x});if(!r.success)return toast(r.message,1);A.adm=null;paint()}
+ else if(k==='sv')save();else if(k==='vosv')saveVo();else if(k==='vot')testVo();else if(k==='rusv')saveRu();else if(k==='aimg'){const c=(A.au||{})[x];if(c)auBlob(c).then(u=>window.open(u,'_blank'))}else if(k==='setsc'){doAct({k:'setscore',pid:$('#rp').value,val:$('#rv').value,why:$('#rw').value},b).then(()=>{A.lg=null;loadLog()})}else if(k==='lgr'){A.lg=null;loadLog()}else if(k==='und'){const i=x.lastIndexOf(':'),pid=x.slice(0,i),dl=+x.slice(i+1);if(!confirm('Batalkan perubahan skor ini?'))return;doAct({k:'manual',pid:pid,delta:-dl,why:'Batal entri'},b).then(()=>{A.lg=null;loadLog()})}else if(k==='aplay')AU.prev(x);else if(k==='adel'){if(!confirm('Hapus berkas audio ini?'))return;const r=await call('delAudio',{slot:x});if(!r.success)return toast(r.message,1);A.adm=null;paint()}
  else if(k==='nm'){b.disabled=true;const r=await call('newMatch',{nama:$('#mn').value,perTurn:+$('#mt').value,lolos:+$('#ml').value,paket:$('#mk').value,ids:[...document.querySelectorAll('.pk:checked')].map(c=>c.value)});b.disabled=false;if(!r.success)return toast(r.message,1);const bt=await call('boot');if(bt.success)setV(bt);A.tab='arena';A.adm=null;toast('Pertandingan aktif');paint()}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='pin')document.querySelector('[data-act="lg"]').click();if(e.key==='Enter'&&e.target.id==='xpin')document.querySelector('[data-act="xk"]').click()});
 document.addEventListener('input',e=>{if(e.target.id==='fq')flt()});document.addEventListener('change',e=>{if(e.target.id==='ff')flt()});
@@ -263,6 +264,16 @@ function skorV(s){if(!A.lg&&!A.lgl){A.lgl=1;loadLog()}const nm=id=>(s.tm.find(t=
  <div class="card"><div class="row sp"><h3>Riwayat perubahan skor</h3><button class="f0" data-act="lgr">Muat ulang</button></div>${(A.lg||[]).length?A.lg.map(r=>`<div class="lb" style="padding:8px;flex-wrap:wrap"><div style="flex:1 1 160px"><b>${esc(nm(r.p))}</b><div class="mut" style="font-size:12px">Soal ${esc(r.q)} · ${esc(r.w)}</div></div><span class="tag ${r.d>=0?'ok':'er'}">${r.d>0?'+':''}${r.d}</span><button class="f0" data-act="und:${esc(r.p)}:${r.d}" style="min-height:36px">Batalkan</button></div>`).join(''):'<p class="mut">Belum ada perubahan skor.</p>'}</div></div></div>`}
 async function loadLog(){const r=await call('logs');A.lgl=0;if(r.success){A.lg=r.rows;if(A.mode==='staff'&&A.tab==='skor')paint()}}
 const imgRow=(x,c)=>`<div class="lb" style="flex-wrap:wrap"><div style="flex:1 1 220px"><h3>${x[1]}</h3><span class="mut">${c?esc(c.name):'(belum ada — latar polos)'}</span></div><label class="tag" style="cursor:pointer;margin:0">${c?'Ganti':'Unggah'}<input type="file" accept="image/*" hidden data-au="${x[0]}"></label>${c?`<button data-act="aimg:${x[0]}">Lihat</button><button class="er" data-act="adel:${x[0]}">Hapus</button>`:''}</div>`;
+
+// ── Baca soal otomatis → hitung mundur otomatis; aturan permainan ──
+async function autoRead(s){const tok=A.rr=(A.rr||0)+1,live=()=>tok===A.rr;await sleep(1400);if(!live())return;await speakP(s.q.text,live);if(!live())return;await sleep(600);if(!live())return;if((s.gm||{}).autoTimer!==false)call('autoT',{qid:s.q.id})}
+const RU={autoRead:true,autoTimer:true,lempar:true,maxLempar:0,lemparSec:0,jawab:15,salah:10};
+function rulV(){const r=Object.assign({},RU,A.rules||{}),cb=(k,l,h)=>`<label style="display:flex;gap:10px;align-items:center;letter-spacing:0;font-size:14px;margin:14px 0 2px;text-transform:none"><input type="checkbox" id="ru_${k}" ${r[k]?'checked':''} style="width:22px;min-height:22px"> ${l}</label><div class="mut" style="font-size:12px;text-transform:none">${h}</div>`;
+ return `<div class="card"><h3>Aturan permainan</h3><p class="mut" style="text-transform:none;margin:4px 0">Berlaku langsung, termasuk pada pertandingan yang sedang berjalan.</p>${cb('autoRead','Soal dibacakan otomatis saat ditampilkan','Narator layar IFP membaca soal begitu moderator menekan "Tampilkan ke IFP".')}${cb('autoTimer','Hitung mundur mulai otomatis setelah soal selesai dibaca','Timer berjalan sendiri begitu pembacaan selesai. Moderator tetap bisa menekan Pause atau Reset.')}${cb('lempar','Lempar soal diaktifkan','Bila dimatikan, tombol Lempar di panel moderator nonaktif.')}
+ <div class="row"><div><label for="ru_maxLempar">Maksimal lempar per soal (0 = tanpa batas)</label><input id="ru_maxLempar" type="number" min="0" max="20" value="${r.maxLempar}"></div><div><label for="ru_lemparSec">Waktu rebutan setelah lempar (detik; 0 = sama dengan waktu soal)</label><input id="ru_lemparSec" type="number" min="0" max="120" value="${r.lemparSec}"></div></div>
+ <div class="row"><div><label for="ru_jawab">Waktu menjawab setelah buzzer ditekan (detik)</label><input id="ru_jawab" type="number" min="3" max="120" value="${r.jawab}"></div><div><label for="ru_salah">Pengurangan poin jawaban salah</label><input id="ru_salah" type="number" min="0" max="100" value="${r.salah}"></div></div>
+ <button class="ok" style="margin-top:14px;width:100%" data-act="rusv">Simpan aturan</button></div>`}
+async function saveRu(){const g=i=>$('#ru_'+i),o={autoRead:g('autoRead').checked,autoTimer:g('autoTimer').checked,lempar:g('lempar').checked,maxLempar:+g('maxLempar').value,lemparSec:+g('lemparSec').value,jawab:+g('jawab').value,salah:+g('salah').value};const r=await call('setRules',o);if(!r.success)return toast(r.message,1);toast('Aturan tersimpan');A.adm=null;paint()}
 
 // ── Jam & timer lokal (tanpa render ulang) ──
 function tick(){const s=A.v&&A.v.s;if(!s)return;const t=s.t,l=t.st==='run'?Math.max(0,(t.end-(Date.now()+A.off))/1000):t.left,n=Math.ceil(l);
